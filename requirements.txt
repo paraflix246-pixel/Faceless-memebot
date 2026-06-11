@@ -1,0 +1,15 @@
+Pillow>=10.0.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+APScheduler>=3.10.0
+moviepy>=2.0.0
+streamlit>=1.30.0
+praw>=7.7.0
+
+# Optional LLM providers (install only if using --llm or auto captions)
+# pip install openai anthropic
+# openai>=1.0.0
+# anthropic>=0.25.0
+
+# Optional live X posting (dry-run works without this)
+# tweepy>=4.14.0
