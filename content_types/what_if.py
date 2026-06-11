@@ -35,6 +35,7 @@ Return ONLY valid JSON with this structure:
 }}
 
 Rules:
+- Write ALL narration, hook, body, and closing question in English only
 - Hook must grab attention instantly
 - Each scene narration should be 1-2 sentences
 - Image prompts: anime style, no text in image, vertical 9:16 framing

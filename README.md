@@ -28,13 +28,17 @@ python generate.py --topic "Naruto vs Luffy" --type versus --output battle.mp4
 |-------|--------|---------|----------|
 | Script | `script.py` | DeepSeek | Gemini → mock |
 | Scenes | `scenes.py` | JSON parse | Manual templates |
-| Images | `images.py` | Local SD / Replicate | DALL-E → placeholders |
-| Voice | `voiceover.py` | Edge TTS | gTTS → silent |
+| Images | `images.py` | Local SD / Replicate / DALL-E | Pollinations.ai → Pillow renders |
+| Voice | `voiceover.py` | Edge TTS (English) | gTTS → silent |
 | Captions | `captions.py` | faster-whisper | Static timing |
 | Compose | `compose.py` | MoviePy | FFmpeg |
 | Quality | `quality.py` | Duration/sync checks | Auto-regenerate |
 
-Works **without API keys** — uses mock scripts, colored placeholder images, Edge TTS (free), and static captions.
+Works **without API keys** — uses mock scripts (English), Pollinations.ai or rich Pillow scene art, English Edge TTS (`en-US-AriaNeural`), and static captions.
+
+**Language:** All scripts, voiceovers, and captions are English by default. Anime content keeps anime-style visuals but uses an English narrator.
+
+**Image sources (in order):** Local Stable Diffusion → Replicate → DALL-E (if keys set) → [Pollinations.ai](https://pollinations.ai) (free, no key) → programmatic Pillow scene cards with gradients, silhouettes, and text overlays.
 
 ### Shorts env vars
 

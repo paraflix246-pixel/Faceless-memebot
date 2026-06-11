@@ -8,13 +8,14 @@ from pathlib import Path
 
 from pipeline_log import log_error, log_info, record_fallback
 
+DEFAULT_ENGLISH_VOICE = os.getenv("EDGE_TTS_VOICE", "en-US-AriaNeural")
+
 
 def _gtts(text: str, out: Path) -> bool:
     try:
         from gtts import gTTS
 
-        lang = "ja" if voice_lang_hint(text) == "ja" else "en"
-        tts = gTTS(text=text, lang=lang)
+        tts = gTTS(text=text, lang="en")
         tts.save(str(out))
         return out.exists() and out.stat().st_size > 0
     except Exception as exc:
@@ -22,19 +23,16 @@ def _gtts(text: str, out: Path) -> bool:
         return False
 
 
-def voice_lang_hint(text: str) -> str:
-    for ch in text[:50]:
-        if "\u3040" <= ch <= "\u9fff":
-            return "ja"
-    return "en"
-
-
 def generate_voiceover(
     text: str,
-    voice: str,
-    out: Path,
+    voice: str | None = None,
+    out: Path | None = None,
 ) -> tuple[Path, str]:
     """Synthesize speech; returns (path, provider_used)."""
+    if out is None:
+        raise ValueError("out path is required")
+    if not voice or voice.startswith("ja-"):
+        voice = DEFAULT_ENGLISH_VOICE
     out.parent.mkdir(parents=True, exist_ok=True)
     rate = os.getenv("EDGE_TTS_RATE", "+0%")
 

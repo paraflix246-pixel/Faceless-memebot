@@ -33,12 +33,13 @@ Return ONLY valid JSON:
 }}
 
 Rules:
+- Write ALL narration, hook, body, and closing question in English only
 - Speak like a passionate anime fan
 - Reference iconic moments without quoting copyrighted dialogue
 - Image prompts: vibrant anime art style, cel-shaded, 9:16 vertical, no text"""
 
     def voice(self) -> str:
-        return "ja-JP-NanamiNeural"
+        return "en-US-AriaNeural"
 
     def image_style_suffix(self) -> str:
         return "vibrant anime art, cel-shaded, emotional scene, vertical 9:16"

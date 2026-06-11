@@ -33,6 +33,7 @@ Return ONLY valid JSON:
 }}
 
 Rules:
+- Write ALL narration, hook, body, and closing question in English only
 - Alternate focus between both sides
 - Build tension toward a cliffhanger verdict
 - Image prompts: dynamic action poses, split-screen feel, anime style, 9:16 vertical"""

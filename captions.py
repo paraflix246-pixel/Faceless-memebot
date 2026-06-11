@@ -39,7 +39,9 @@ def _try_whisper(audio_path: Path) -> list[CaptionWord] | None:
 
         model_size = "tiny"
         model = WhisperModel(model_size, device="cpu", compute_type="int8")
-        segments, _ = model.transcribe(str(audio_path), word_timestamps=True)
+        segments, _ = model.transcribe(
+            str(audio_path), word_timestamps=True, language="en"
+        )
         words: list[CaptionWord] = []
         for segment in segments:
             if segment.words:

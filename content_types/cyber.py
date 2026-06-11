@@ -33,6 +33,7 @@ Return ONLY valid JSON:
 }}
 
 Rules:
+- Write ALL narration, hook, body, and closing question in English only
 - No step-by-step hacking instructions — awareness only
 - Use analogies non-technical viewers understand
 - Image prompts: cyberpunk aesthetic, neon, matrix-style, vertical 9:16, no readable text"""

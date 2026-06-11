@@ -51,8 +51,8 @@ class BaseContentType(ABC):
         )
 
     def voice(self) -> str:
-        """Edge TTS voice ID."""
-        return "en-US-GuyNeural"
+        """Edge TTS voice ID (English by default)."""
+        return "en-US-AriaNeural"
 
     def image_style_suffix(self) -> str:
         """Appended to every scene image prompt."""
