@@ -27,16 +27,23 @@ Return ONLY valid JSON:
   "body": "Compare strengths, weaknesses, signature moves, and who might win",
   "closing_question": "Who wins? Ask viewers to comment",
   "scenes": [
-    {{"id": 1, "narration": "...", "image_prompt": "epic battle scene description"}},
-    ... 6 scenes
+    {{
+      "id": 1,
+      "narration": "...",
+      "character": "Fighter name e.g. Naruto Uzumaki",
+      "image_query": "Naruto Uzumaki Naruto anime battle scene HD",
+      "image_prompt": "Naruto Uzumaki action pose, anime screenshot, versus battle"
+    }},
+    ... 6 scenes alternating characters
   ]
 }}
 
 Rules:
 - Write ALL narration, hook, body, and closing question in English only
-- Alternate focus between both sides
+- Alternate focus between both combatants each scene
 - Build tension toward a cliffhanger verdict
-- Image prompts: dynamic action poses, split-screen feel, anime style, 9:16 vertical"""
+- Each scene MUST include character and image_query for the featured fighter
+- Image prompts: real character likeness, dynamic action poses, anime style, 9:16 vertical"""
 
     def voice(self) -> str:
         return "en-US-DavisNeural"

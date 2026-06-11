@@ -86,10 +86,20 @@ def _call_gemini(prompt: str) -> str | None:
 
 def _mock_script(content_type: "BaseContentType", topic: str) -> "ScriptResult":
     from content_types.base import ScriptResult
+    from images.character_sources import (
+        build_image_query,
+        character_for_scene,
+        extract_characters,
+    )
 
     record_fallback("mock_script")
     log_info("script", "Using mock script fallback")
-    hook = f"What if everything you knew about {topic} was wrong?"
+    versus = content_type.name == "versus"
+    characters = extract_characters(topic)
+    char_names = [c.name for c in characters]
+    char_label = " and ".join(char_names) if char_names else topic
+
+    hook = f"What if everything you knew about {char_label} was wrong?"
     body = (
         f"Imagine a world where {topic} plays out completely differently. "
         f"The stakes are higher than anyone expected. Every choice ripples through "
@@ -100,23 +110,38 @@ def _mock_script(content_type: "BaseContentType", topic: str) -> "ScriptResult":
         f"that would break the internet. The ripple effects touch every character we love, "
         f"forcing them to adapt or fall. In this timeline, nothing stays the same for long."
     )
-    question = f"Would this version of {topic} be better? Drop your take below!"
+    question = f"Would this version of {char_label} be better? Drop your take below!"
     scenes = []
     narrations = [
         hook,
-        f"Picture the opening scene of {topic} — but something feels off.",
-        "The power balance shifts in ways nobody predicted.",
-        "Allies become rivals. Rivals find common ground.",
-        "The final confrontation hits different in this timeline.",
+        f"Picture the opening scene with {char_label} — but something feels off.",
+        f"{char_names[0] if char_names else 'The hero'} faces power shifts nobody predicted."
+        if not versus
+        else f"{char_names[0] if len(char_names) > 0 else 'Fighter A'} shows their signature move.",
+        "Allies become rivals. Rivals find common ground."
+        if not versus
+        else f"{char_names[1] if len(char_names) > 1 else 'Fighter B'} counters with raw power.",
+        f"The final confrontation with {char_label} hits different in this timeline.",
         question,
     ]
-    colors = content_type.placeholder_colors()
     for i, narration in enumerate(narrations, start=1):
+        match = character_for_scene(characters, i - 1, versus=versus)
+        char_name = match.name if match else ""
+        image_query = build_image_query(match, i - 1, narration, versus=versus)
+        if match:
+            image_prompt = (
+                f"{match.name} from {match.franchise}, {match.visual}, "
+                f"scene {i}, {content_type.image_style_suffix()}"
+            )
+        else:
+            image_prompt = f"{topic}, scene {i}, {content_type.image_style_suffix()}"
         scenes.append(
             {
                 "id": i,
                 "narration": narration,
-                "image_prompt": f"{topic}, scene {i}, {content_type.image_style_suffix()}",
+                "character": char_name,
+                "image_query": image_query,
+                "image_prompt": image_prompt,
             }
         )
     full = f"{hook} {body} {question}"

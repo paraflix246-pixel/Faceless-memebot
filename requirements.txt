@@ -12,6 +12,7 @@ edge-tts>=6.1.0
 gTTS>=2.5.0
 openai>=1.0.0
 google-generativeai>=0.8.0
+duckduckgo-search>=6.0.0
 
 # Optional Shorts Factory packages
 # pip install faster-whisper   # word-level captions (CPU)

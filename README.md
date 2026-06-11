@@ -28,7 +28,7 @@ python generate.py --topic "Naruto vs Luffy" --type versus --output battle.mp4
 |-------|--------|---------|----------|
 | Script | `script.py` | DeepSeek | Gemini → mock |
 | Scenes | `scenes.py` | JSON parse | Manual templates |
-| Images | `images.py` | Local SD / Replicate / DALL-E | Pollinations.ai → Pillow renders |
+| Images | `images/` | DDG character search / Local SD / Replicate | Pollinations.ai → Pillow renders |
 | Voice | `voiceover.py` | Edge TTS (English) | gTTS → silent |
 | Captions | `captions.py` | faster-whisper | Static timing |
 | Compose | `compose.py` | MoviePy | FFmpeg |
@@ -38,7 +38,11 @@ Works **without API keys** — uses mock scripts (English), Pollinations.ai or r
 
 **Language:** All scripts, voiceovers, and captions are English by default. Anime content keeps anime-style visuals but uses an English narrator.
 
-**Image sources (in order):** Local Stable Diffusion → Replicate → DALL-E (if keys set) → [Pollinations.ai](https://pollinations.ai) (free, no key) → programmatic Pillow scene cards with gradients, silhouettes, and text overlays.
+**Image sources (in order):** DuckDuckGo character image search (free, no key) → Local Stable Diffusion → Replicate → DALL-E (if keys set) → [Pollinations.ai](https://pollinations.ai) (free, character-aware prompts) → Pillow scene cards with character name overlay.
+
+**Character visuals:** The pipeline extracts known characters from your topic (Goku, Naruto, Luffy, etc.), builds per-scene search queries, and passes character context into every image prompt so scenes show the actual franchise characters — not generic silhouettes.
+
+**Legal note:** Generated shorts are intended for fan/educational commentary. Images come from web search or AI generation; you are responsible for complying with platform terms of service and applicable copyright/fair-use rules in your jurisdiction.
 
 ### Shorts env vars
 

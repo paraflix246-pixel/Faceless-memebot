@@ -1,4 +1,4 @@
-"""Stage 3: Scene image generation (SD / Replicate / DALL-E / Pollinations / Pillow)."""
+"""Stage 3: Scene image generation (DDG search / SD / Replicate / Pollinations / Pillow)."""
 
 from __future__ import annotations
 
@@ -13,13 +13,17 @@ from urllib.parse import quote
 import httpx
 from PIL import Image, ImageDraw, ImageFont
 
+from images.character_sources import (
+    OUTPUT_SIZE,
+    build_ai_prompt,
+    fit_cover,
+    search_character_image,
+)
 from pipeline_log import log_error, log_info, record_fallback
-from scenes import Scene
 
 if TYPE_CHECKING:
     from content_types.base import BaseContentType
-
-OUTPUT_SIZE = (768, 1344)  # portrait SD size, scaled to 1080x1920 in compose
+    from scenes import Scene
 
 # Distinct anime-style gradient palettes per scene index
 _SCENE_PALETTES: list[tuple[tuple[int, int, int], tuple[int, int, int]]] = [
@@ -37,11 +41,11 @@ _SCENE_ICONS = ("⚡", "🔥", "✨", "🌙", "⭐", "💫", "🌸", "🎭")
 
 
 def generate_scene_images(
-    scenes: list[Scene],
+    scenes: list["Scene"],
     content_type: "BaseContentType",
     work_dir: Path,
 ) -> list[Path]:
-    """Generate one image per scene with tiered fallbacks."""
+    """Generate one image per scene with character-aware tiered fallbacks."""
     work_dir.mkdir(parents=True, exist_ok=True)
     paths: list[Path] = []
     colors = content_type.placeholder_colors()
@@ -53,21 +57,31 @@ def generate_scene_images(
 
     for i, scene in enumerate(scenes):
         out = work_dir / f"scene_{scene.id:02d}.png"
+        ai_prompt = build_ai_prompt(scene.image_prompt, scene.character_match, i)
+        search_query = scene.image_query or scene.image_prompt
+
         generated = (
-            _try_local_sd(scene.image_prompt, out)
-            or _try_replicate(scene.image_prompt, out)
-            or _try_dalle(scene.image_prompt, out)
-            or (_try_pollinations(scene.image_prompt, out) if pollinations_enabled else None)
+            search_character_image(search_query, out, result_offset=i)
+            or _try_local_sd(ai_prompt, out)
+            or _try_replicate(ai_prompt, out)
+            or _try_dalle(ai_prompt, out)
+            or (_try_pollinations(ai_prompt, out) if pollinations_enabled else None)
         )
         if generated:
             paths.append(out)
-            log_info("images", f"Generated scene {scene.id} via {generated}")
+            char_label = scene.character or "unknown"
+            log_info("images", f"Scene {scene.id} ({char_label}) via {generated}")
         else:
-            record_fallback("pillow_scene_images")
             color = colors[i % len(colors)]
-            _make_rich_scene_image(out, scene, i, color)
+            fallback_source = _make_rich_scene_image(out, scene, i, color)
+            if fallback_source == "ddg_search":
+                generated = "ddg_search"
+            else:
+                record_fallback("pillow_scene_images")
+                generated = "pillow"
             paths.append(out)
-            log_info("images", f"Pillow render for scene {scene.id}")
+            char_label = scene.character or "unknown"
+            log_info("images", f"Scene {scene.id} ({char_label}) via {generated}")
 
     return paths
 
@@ -89,8 +103,7 @@ def _try_pollinations(prompt: str, out: Path) -> str | None:
             if "image" not in content_type and len(resp.content) < 1000:
                 return None
             img = Image.open(BytesIO(resp.content)).convert("RGB")
-            if img.size != OUTPUT_SIZE:
-                img = img.resize(OUTPUT_SIZE, Image.Resampling.LANCZOS)
+            img = fit_cover(img)
             img.save(out)
             return "pollinations"
     except Exception as exc:
@@ -105,7 +118,7 @@ def _try_local_sd(prompt: str, out: Path) -> str | None:
     try:
         payload = {
             "prompt": prompt,
-            "negative_prompt": "text, watermark, blurry, low quality",
+            "negative_prompt": "text, watermark, blurry, low quality, wrong character",
             "width": OUTPUT_SIZE[0],
             "height": OUTPUT_SIZE[1],
             "steps": 20,
@@ -116,8 +129,8 @@ def _try_local_sd(prompt: str, out: Path) -> str | None:
             import base64
 
             b64 = resp.json()["images"][0]
-            img = Image.open(BytesIO(base64.b64decode(b64)))
-            img.save(out)
+            img = Image.open(BytesIO(base64.b64decode(b64))).convert("RGB")
+            fit_cover(img).save(out)
             return "local_sd"
     except Exception as exc:
         log_error("images", "Local Stable Diffusion failed", exc)
@@ -147,7 +160,7 @@ def _try_replicate(prompt: str, out: Path) -> str | None:
         with httpx.Client(timeout=120.0) as client:
             resp = client.get(url)
             resp.raise_for_status()
-            Image.open(BytesIO(resp.content)).save(out)
+            fit_cover(Image.open(BytesIO(resp.content)).convert("RGB")).save(out)
         return "replicate"
     except Exception as exc:
         log_error("images", "Replicate image gen failed", exc)
@@ -173,8 +186,7 @@ def _try_dalle(prompt: str, out: Path) -> str | None:
         with httpx.Client(timeout=60.0) as http:
             resp = http.get(url)
             resp.raise_for_status()
-            img = Image.open(BytesIO(resp.content)).resize(OUTPUT_SIZE, Image.Resampling.LANCZOS)
-            img.save(out)
+            fit_cover(Image.open(BytesIO(resp.content)).convert("RGB")).save(out)
         return "dalle"
     except Exception as exc:
         log_error("images", "DALL-E image gen failed", exc)
@@ -183,11 +195,15 @@ def _try_dalle(prompt: str, out: Path) -> str | None:
 
 def _make_rich_scene_image(
     out: Path,
-    scene: Scene,
+    scene: "Scene",
     index: int,
     accent: tuple[int, int, int],
-) -> None:
-    """Programmatic anime-style scene card when no AI image API is available."""
+) -> str:
+    """Last-resort scene card with prominent character name + DDG retry."""
+    if scene.image_query:
+        if search_character_image(scene.image_query, out, result_offset=index + 3):
+            return "ddg_search"
+
     w, h = OUTPUT_SIZE
     top, bottom = _SCENE_PALETTES[index % len(_SCENE_PALETTES)]
     img = Image.new("RGB", OUTPUT_SIZE)
@@ -196,14 +212,17 @@ def _make_rich_scene_image(
 
     rng = random.Random(scene.id * 997 + index)
     _draw_decorative_elements(draw, w, h, index, accent, rng)
-    _draw_silhouette(draw, w, h, index, rng)
 
     title_font = _load_font(36)
     body_font = _load_font(24)
     badge_font = _load_font(20)
+    char_font = _load_font(56)
 
     badge = f"Scene {scene.id}"
     _draw_badge(draw, badge, badge_font, w, accent)
+
+    if scene.character:
+        _draw_character_name(draw, scene.character, char_font, w, h)
 
     title = _scene_title(scene)
     _draw_title_block(draw, title, title_font, w, h)
@@ -217,6 +236,29 @@ def _make_rich_scene_image(
     _draw_icon_overlay(draw, icon, w, h, index)
 
     img.save(out)
+    return "pillow"
+
+
+def _draw_character_name(
+    draw: ImageDraw.ImageDraw,
+    name: str,
+    font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+    w: int,
+    h: int,
+) -> None:
+    """Display character name prominently in last-resort cards."""
+    lines = _wrap_text(draw, name.upper(), font, w - 60)
+    line_h = draw.textbbox((0, 0), "Ay", font=font)[3] + 8
+    total_h = len(lines) * line_h
+    y = int(h * 0.32) - total_h // 2
+    for line in lines:
+        bbox = draw.textbbox((0, 0), line, font=font)
+        tw = bbox[2] - bbox[0]
+        x = (w - tw) // 2
+        for dx, dy in [(-3, 0), (3, 0), (0, -3), (0, 3), (-2, -2), (2, 2)]:
+            draw.text((x + dx, y + dy), line, fill=(0, 0, 0), font=font)
+        draw.text((x, y), line, fill=(255, 220, 60), font=font)
+        y += line_h
 
 
 def _draw_vertical_gradient(
@@ -264,51 +306,6 @@ def _draw_decorative_elements(
                 points.append((px, py))
         if len(points) >= 3:
             draw.polygon(points[:10], fill=(255, 255, 200))
-
-
-def _draw_silhouette(
-    draw: ImageDraw.ImageDraw,
-    w: int,
-    h: int,
-    index: int,
-    rng: random.Random,
-) -> None:
-    """Simple character silhouette — distinct shape per scene."""
-    base_y = int(h * 0.55)
-    cx = w // 2 + (index - 2) * 30
-    dark = (20, 15, 35)
-
-    # Head
-    head_r = 55 + (index % 3) * 8
-    draw.ellipse([cx - head_r, base_y - head_r * 3, cx + head_r, base_y - head_r], fill=dark)
-
-    # Body
-    body_w = 90 + index * 10
-    body_h = 180 + (index % 2) * 40
-    draw.rounded_rectangle(
-        [cx - body_w // 2, base_y - head_r, cx + body_w // 2, base_y + body_h],
-        radius=20,
-        fill=dark,
-    )
-
-    # Arms (pose varies by scene)
-    arm_y = base_y - head_r + 20
-    if index % 3 == 0:
-        draw.line([(cx - body_w // 2, arm_y), (cx - body_w, arm_y - 60)], fill=dark, width=18)
-        draw.line([(cx + body_w // 2, arm_y), (cx + body_w, arm_y + 40)], fill=dark, width=18)
-    elif index % 3 == 1:
-        draw.line([(cx - body_w // 2, arm_y), (cx - body_w - 20, arm_y + 80)], fill=dark, width=18)
-        draw.line([(cx + body_w // 2, arm_y), (cx + body_w + 20, arm_y + 80)], fill=dark, width=18)
-    else:
-        draw.line([(cx - body_w // 2, arm_y), (cx - body_w // 2 - 40, arm_y - 80)], fill=dark, width=18)
-        draw.line([(cx + body_w // 2, arm_y), (cx + body_w // 2 + 40, arm_y - 80)], fill=dark, width=18)
-
-    # Ground glow
-    glow_w = 200 + index * 20
-    draw.ellipse(
-        [cx - glow_w, base_y + body_h - 20, cx + glow_w, base_y + body_h + 40],
-        fill=(255, 255, 255, 30) if hasattr(draw, "ellipse") else (60, 50, 80),
-    )
 
 
 def _draw_badge(
@@ -382,7 +379,7 @@ def _draw_icon_overlay(
     draw.text((x, y), icon, fill=(255, 255, 255), font=font)
 
 
-def _scene_title(scene: Scene) -> str:
+def _scene_title(scene: "Scene") -> str:
     words = scene.narration.split()
     if len(words) <= 8:
         return scene.narration

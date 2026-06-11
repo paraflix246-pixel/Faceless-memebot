@@ -27,7 +27,13 @@ Return ONLY valid JSON:
   "body": "Tell the story with passion — lore, twists, character depth",
   "closing_question": "Ask fans a debate question",
   "scenes": [
-    {{"id": 1, "narration": "...", "image_prompt": "anime character/scene description"}},
+    {{
+      "id": 1,
+      "narration": "...",
+      "character": "Exact character name e.g. Goku",
+      "image_query": "Goku Dragon Ball Z anime official screenshot HD",
+      "image_prompt": "Dragon Ball Z Goku, spiky black hair, orange gi, anime screenshot"
+    }},
     ... 6 scenes
   ]
 }}
@@ -36,7 +42,8 @@ Rules:
 - Write ALL narration, hook, body, and closing question in English only
 - Speak like a passionate anime fan
 - Reference iconic moments without quoting copyrighted dialogue
-- Image prompts: vibrant anime art style, cel-shaded, 9:16 vertical, no text"""
+- Each scene MUST name the real character (character field) and include a web-searchable image_query
+- Image prompts: use the ACTUAL character likeness from the anime, cel-shaded, 9:16 vertical, no text"""
 
     def voice(self) -> str:
         return "en-US-AriaNeural"
