@@ -1,4 +1,65 @@
-# Faceless Memebot
+# Faceless Memebot + Shorts Factory Bot
+
+Two pipelines in one repo:
+
+1. **Shorts Factory Bot** — turn a topic into a full 30–60s vertical short (script → scenes → images → voiceover → captions → MP4)
+2. **Faceless Memebot** — automated meme batch pipeline for TikTok, Reels, Shorts, and X
+
+See [`BOT_DEFINITION.md`](BOT_DEFINITION.md) for the full Shorts Factory Bot specification.
+
+---
+
+## Shorts Factory Bot
+
+Generate viral-ready vertical videos (1080×1920, H.264, 30fps) from a single topic.
+
+```bash
+python generate.py --topic "What if Goku was born on Earth?" --type anime
+python generate.py --topic "Naruto vs Luffy" --type versus --output battle.mp4
+```
+
+**Content types:** `what_if`, `versus`, `anime`, `cyber`
+
+**Output:** `outputs/videos/<filename>.mp4`
+
+### Pipeline stages
+
+| Stage | Module | Primary | Fallback |
+|-------|--------|---------|----------|
+| Script | `script.py` | DeepSeek | Gemini → mock |
+| Scenes | `scenes.py` | JSON parse | Manual templates |
+| Images | `images.py` | Local SD / Replicate | DALL-E → placeholders |
+| Voice | `voiceover.py` | Edge TTS | gTTS → silent |
+| Captions | `captions.py` | faster-whisper | Static timing |
+| Compose | `compose.py` | MoviePy | FFmpeg |
+| Quality | `quality.py` | Duration/sync checks | Auto-regenerate |
+
+Works **without API keys** — uses mock scripts, colored placeholder images, Edge TTS (free), and static captions.
+
+### Shorts env vars
+
+Copy `.env.example` → `.env` and set optional keys:
+
+| Variable | Purpose |
+|----------|---------|
+| `DEEPSEEK_API_KEY` | Script generation (OpenAI-compatible) |
+| `DEEPSEEK_BASE_URL` | Default: `https://api.deepseek.com/v1` |
+| `GEMINI_API_KEY` | Script fallback |
+| `REPLICATE_API_KEY` | Cloud image generation |
+| `OPENAI_API_KEY` + `DALLE_ENABLED=true` | DALL-E 3 images |
+| `SD_LOCAL_ENABLED=true` | Local Automatic1111 SD API |
+
+### Adding a content type
+
+1. Create `content_types/your_type.py` inheriting `BaseContentType`
+2. Override `prompt_template()` and optionally `voice()` / `image_style_suffix()`
+3. Register in `content_types/__init__.py` and `generate.py` choices
+
+No changes needed to core pipeline modules.
+
+---
+
+## Faceless Memebot
 
 Automated meme content pipeline for **faceless social media channels** — TikTok, Instagram Reels, YouTube Shorts, and X/Twitter.
 
@@ -156,6 +217,13 @@ See `assets/templates/README.md` for details.
 
 ```
 Faceless-memebot/
+├── BOT_DEFINITION.md       # Shorts Factory Bot spec
+├── generate.py             # Shorts Factory CLI
+├── script.py / scenes.py / images.py / voiceover.py / captions.py
+├── compose.py / quality.py / pipeline_log.py
+├── content_types/          # what_if, versus, anime, cyber
+├── outputs/videos/         # Generated shorts
+├── logs/errors.log         # Pipeline error log
 ├── assets/templates/       # Custom background images
 ├── memebot/
 │   ├── cli.py              # CLI entry

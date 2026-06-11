@@ -5,10 +5,20 @@ APScheduler>=3.10.0
 moviepy>=2.0.0
 streamlit>=1.30.0
 praw>=7.7.0
+httpx>=0.27.0
 
-# Optional LLM providers (install only if using --llm or auto captions)
+# Shorts Factory Bot
+edge-tts>=6.1.0
+gTTS>=2.5.0
+openai>=1.0.0
+google-generativeai>=0.8.0
+
+# Optional Shorts Factory packages
+# pip install faster-whisper   # word-level captions (CPU)
+# pip install replicate        # cloud image gen
+
+# Optional Memebot LLM providers
 # pip install openai anthropic
-# openai>=1.0.0
 # anthropic>=0.25.0
 
 # Optional live X posting (dry-run works without this)

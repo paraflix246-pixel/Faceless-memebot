@@ -16,7 +16,9 @@ env/
 
 # Output
 output/
+outputs/
 *.log
+!logs/.gitkeep
 
 # IDE
 .idea/
